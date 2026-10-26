@@ -2,5 +2,7 @@
   "name": "JAIRRESTAURA Consultorio Digital",
   "description": "Sistema Clínico, Psiquiátrico, Psicoterapéutico y Administrativo Enterprise para consultorio digital en Colombia.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

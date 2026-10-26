@@ -143,23 +143,33 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
             </div>
           </div>
 
-          {/* Verification Status Warning if not signed */}
-          {!isSigned && (
+          {/* Verification Status Warning if not signed or annulled */}
+          {prescription.status === 'Anulado' ? (
+            <div className="p-3.5 rounded-lg bg-red-50 border border-red-300 text-red-900 flex items-center gap-2.5 text-xs">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+              <div>
+                <strong className="font-bold">DOCUMENTO ANULADO ADMINISTRATIVAMENTE</strong>
+                <p className="text-[11px]">
+                  Esta fórmula ha sido anulada y carece de validez clínica o farmacéutica. Motivo: {prescription.cancellationReason || 'Anulada por el profesional responsable'}.
+                </p>
+              </div>
+            </div>
+          ) : !isSigned ? (
             <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 flex items-center gap-2.5 text-xs">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
               <div>
                 <strong className="font-bold">DOCUMENTO EN ESTADO: {prescription.status.toUpperCase()}</strong>
                 <p className="text-[11px]">
-                  Este borrador no tiene validez legal de dispensación farmacéutica hasta que sea debidamente aprobado y firmado digitalmente por el Médico Psiquiatra autorizado.
+                  Este borrador no tiene validez legal de dispensación farmacéutica hasta que sea debidamente aprobado y firmado por el Médico Psiquiatra autorizado.
                 </p>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* Section A: Identificación del Paciente */}
+          {/* SECCIÓN A: Identificación del Paciente */}
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-teal-900 border-b border-slate-200 pb-1.5 mb-2.5">
-              A. Identificación del Paciente
+              SECCIÓN A — IDENTIFICACIÓN DEL PACIENTE
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div>
@@ -194,10 +204,10 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
             </div>
           </div>
 
-          {/* Section B: Información del Tratamiento Farmacológico (Prescripción) */}
+          {/* SECCIÓN B: Prescripción Médica */}
           <div>
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-teal-900 border-b border-slate-200 pb-1.5 mb-3 flex items-center justify-between">
-              <span>B. Prescripción Psicofarmacológica (Detalle de Medicamentos)</span>
+              <span>SECCIÓN B — PRESCRIPCIÓN MÉDICA (Detalle de Medicamentos)</span>
               <span className="text-[10px] text-slate-500 font-normal">
                 Dispensación estrictamente sujeta a prescripción médica
               </span>
@@ -283,10 +293,10 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
             )}
           </div>
 
-          {/* Section C: Identificación del Médico Psiquiatra Prescriptor (MANDATORY BLOCK) */}
+          {/* SECCIÓN C: Identificación y Autorización del Prescriptor */}
           <div className="border border-teal-800/40 rounded-xl p-4 bg-teal-50/30">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-teal-900 border-b border-teal-200 pb-1.5 mb-3 flex items-center justify-between">
-              <span>C. Identificación del Médico Psiquiatra Prescriptor</span>
+              <span>SECCIÓN C — IDENTIFICACIÓN Y AUTORIZACIÓN DEL PRESCRIPTOR</span>
               <span className="text-[10px] text-teal-800 font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Habilitación Médica Certificada
@@ -296,7 +306,7 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="space-y-1">
                 <p>
-                  <strong className="text-slate-600">Nombre completo del médico psiquiatra:</strong>{' '}
+                  <strong className="text-slate-600">Nombre completo del profesional:</strong>{' '}
                   <span className="font-bold text-slate-900">{prescription.psychiatristName}</span>
                 </p>
                 <p>
@@ -310,23 +320,23 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
                   </span>
                 </p>
                 <p>
-                  <strong className="text-slate-600">Institución / Consultorio:</strong>{' '}
+                  <strong className="text-slate-600">Institución o consultorio:</strong>{' '}
                   <span>{prescription.psychiatristInstitution}</span>
                 </p>
                 <p>
-                  <strong className="text-slate-600">Fecha de expedición:</strong>{' '}
-                  <span>{formatDate(prescription.issueDate)}</span>
+                  <strong className="text-slate-600">Fecha y hora de aprobación:</strong>{' '}
+                  <span>{prescription.signedAt ? formatDateTime(prescription.signedAt) : 'Pendiente de aprobación médica'}</span>
                 </p>
               </div>
 
               {/* Signature Box */}
               <div className="flex flex-col justify-end items-center sm:items-end border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-4">
                 <div className="w-64 text-center">
-                  {isSigned && prescription.psychiatristSignatureHash ? (
+                  {isSigned ? (
                     <div className="p-3 rounded-lg bg-white border border-teal-300 shadow-2xs space-y-1 text-center">
                       <div className="flex items-center justify-center gap-1 text-teal-800 font-bold text-xs">
                         <CheckCircle className="w-4 h-4 text-teal-600" />
-                        <span>FIRMADO DIGITALMENTE</span>
+                        <span>AUTORIZACIÓN MÉDICA VERIFICADA</span>
                       </div>
                       <p className="text-[11px] font-bold text-slate-900 leading-tight">
                         {prescription.psychiatristName}
@@ -334,16 +344,13 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
                       <p className="text-[9px] text-slate-500 font-mono">
                         {prescription.psychiatristRegistration}
                       </p>
-                      <p className="text-[9px] text-slate-400 font-mono truncate">
-                        {prescription.psychiatristSignatureHash}
-                      </p>
                       <p className="text-[9px] text-slate-500">
                         {formatDateTime(prescription.signedAt || prescription.issueDate)}
                       </p>
                     </div>
                   ) : (
                     <div className="h-20 border-b-2 border-dashed border-slate-400 flex items-end justify-center pb-1 text-slate-400 text-xs">
-                      [Espacio reservado para firma del psiquiatra]
+                      [Espacio reservado para firma del prescriptor]
                     </div>
                   )}
                   <p className="text-[10px] text-slate-500 font-semibold mt-1">
@@ -354,19 +361,19 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
             </div>
           </div>
 
-          {/* Section D: Constancia del Paciente (OBLIGATORY RECORD) */}
+          {/* SECCIÓN D: Constancia de Entrega */}
           <div className="border border-slate-300 rounded-xl p-4 bg-slate-50">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1.5 mb-2.5 flex items-center justify-between">
-              <span>CONSTANCIA DEL PACIENTE</span>
+              <span>SECCIÓN D — CONSTANCIA DE ENTREGA</span>
               <span className="text-[10px] text-slate-500 font-normal">
-                Acredita recepción y conocimiento informado • No autoriza ni prescribe
+                Recepción informada • No reemplaza la autorización del prescriptor
               </span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="space-y-1">
                 <p>
-                  <strong className="text-slate-600">Nombre completo:</strong>{' '}
+                  <strong className="text-slate-600">Nombre del paciente o representante:</strong>{' '}
                   <span className="font-semibold text-slate-900">
                     {prescription.patientReceipt?.patientOrGuardianName || prescription.patientName}
                   </span>
@@ -379,16 +386,20 @@ export const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
                   </span>
                 </p>
                 <p>
-                  <strong className="text-slate-600">Documento recibido:</strong>{' '}
-                  <span>Fórmula Médica Oficial Psicofarmacológica No. {prescription.id}</span>
+                  <strong className="text-slate-600">Documento entregado:</strong>{' '}
+                  <span>Fórmula Médica {prescription.id} (Versión {prescription.version})</span>
                 </p>
                 <p>
-                  <strong className="text-slate-600">Fecha de recepción:</strong>{' '}
+                  <strong className="text-slate-600">Fecha de entrega:</strong>{' '}
                   <span>
                     {prescription.patientReceipt
                       ? formatDateTime(prescription.patientReceipt.receivedDate)
-                      : 'Pendiente de entrega / firma'}
+                      : 'Pendiente de entrega'}
                   </span>
+                </p>
+                <p>
+                  <strong className="text-slate-600">Método de entrega:</strong>{' '}
+                  <span>{prescription.patientReceipt?.signatureMethod || 'Físico / Digital'}</span>
                 </p>
               </div>
 

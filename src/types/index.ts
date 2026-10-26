@@ -153,6 +153,13 @@ export interface TreatmentPlan {
 
 export type PrescriptionStatus = 
   | 'Borrador' 
+  | 'Pendiente de revisión clínica' 
+  | 'Observado o requiere corrección' 
+  | 'Aprobado por el profesional' 
+  | 'Firmado' 
+  | 'Emitido' 
+  | 'Anulado'
+  // Compatibilidad hacia atrás con registros previos
   | 'Pendiente de Revisión Psiquiatra' 
   | 'Observada / Devuelta' 
   | 'Aprobada y Firmada por Psiquiatra' 
@@ -206,7 +213,13 @@ export interface PsychiatricPrescription {
   psychiatristInstitution: string; // "JAIRRESTAURA Consultorio Digital"
   psychiatristSignatureHash?: string;
   signedAt?: string;
+  verificationMethod?: 'Firma Digital Certificada' | 'Acreditación Biométrica / OTP' | 'Validación Manual en Físico';
+  verificationCode?: string;
   observations?: string;
+  observationNotes?: string; // Observaciones de corrección cuando está Observada
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
   historyOfChanges?: {
     timestamp: string;
     author: string;

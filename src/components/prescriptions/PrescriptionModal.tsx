@@ -7,6 +7,9 @@ import {
   X,
   ShieldCheck,
   Check,
+  ClipboardCheck,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import {
@@ -15,6 +18,7 @@ import {
   PrescribedMedicationItem,
   PrescriptionStatus,
 } from '../../types';
+import { validatePrescriptionConsistency } from '../../utils/consistencyValidator';
 
 interface PrescriptionModalProps {
   onClose: () => void;
@@ -42,46 +46,68 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
   const selectedPatient = patients.find((p) => p.id === selectedPatientId) || patients[0];
 
   const [issueDate, setIssueDate] = useState<string>(
-    existingPrescription?.issueDate || '2026-10-25'
+    existingPrescription?.issueDate || new Date().toISOString().split('T')[0]
   );
+  
+  // Calculate default expiry date: 30 days after issueDate
+  const defaultExpiry = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  })();
+
   const [expiryDate, setExpiryDate] = useState<string>(
-    existingPrescription?.expiryDate || '2026-11-25'
+    existingPrescription?.expiryDate || defaultExpiry
   );
+
+  const isPsychiatrist = currentProfile.role === 'psiquiatra';
+
   const [status, setStatus] = useState<PrescriptionStatus>(
     existingPrescription?.status ||
-      (currentProfile.role === 'psiquiatra'
-        ? 'Borrador'
-        : 'Pendiente de Revisión Psiquiatra')
+      (isPsychiatrist ? 'Borrador' : 'Pendiente de revisión clínica')
   );
   const [diagnosisLinked, setDiagnosisLinked] = useState<string>(
     existingPrescription?.diagnosisLinked || 'F33.1 Trastorno depresivo recurrente, episodio actual moderado'
   );
   const [clinicalJustification, setClinicalJustification] = useState<string>(
-    existingPrescription?.clinicalJustification || 'Tratamiento psicofarmacológico indicado tras evaluación clínica y consentimiento informado.'
+    existingPrescription?.clinicalJustification ||
+      'Tratamiento psicofarmacológico indicado tras evaluación clínica y consentimiento informado según Resolución 1403 de 2007.'
   );
   const [observations, setObservations] = useState<string>(
-    existingPrescription?.observations || 'Control periódico programado. No suspender de forma repentina.'
+    existingPrescription?.observations ||
+      'Control periódico programado. No suspender de forma repentina. Ante cualquier síntoma adverso comunicarse de inmediato.'
   );
 
   const [items, setItems] = useState<PrescribedMedicationItem[]>(
     existingPrescription?.items || [
       {
         id: 'med-item-1',
-        genericName: '',
-        commercialName: '',
+        genericName: 'Sertralina Clorhidrato',
+        commercialName: 'Zoloft',
         concentration: '50 mg',
         pharmaceuticalForm: 'Tableta',
-        dosage: '1 tableta',
+        dosage: '1 tableta (50 mg)',
         route: 'Oral',
         frequency: 'Cada 24 horas (en la mañana)',
         duration: '30 días',
         totalQuantity: '30 (Treinta) tabletas',
         particularInstructions: 'Tomar con abundante agua después del desayuno.',
         relevantPrecautions: 'No consumir con bebidas alcohólicas.',
-        startDate: '2026-10-25',
+        startDate: new Date().toISOString().split('T')[0],
       },
     ]
   );
+
+  // Common psychiatric diagnostic suggestions for quick pick
+  const psychiatricDxOptions = [
+    'F33.1 Trastorno depresivo recurrente, episodio actual moderado',
+    'F41.1 Trastorno de ansiedad generalizada',
+    'F31.1 Trastorno afectivo bipolar, episodio actual maníaco sin síntomas psicóticos',
+    'F41.0 Trastorno de pánico (ansiedad paroxística episódica)',
+    'F43.1 Trastorno de estrés postraumático',
+    'F90.0 Trastorno de la actividad y de la atención (TDAH)',
+    'F51.0 Insomnio no orgánico',
+  ];
 
   const handleAddItem = () => {
     setItems((prev) => [
@@ -98,14 +124,17 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
         duration: '30 días',
         totalQuantity: '30 (Treinta) tabletas',
         particularInstructions: '',
-        relevantPrecautions: '',
-        startDate: '2026-10-25',
+        relevantPrecautions: 'No consumir bebidas alcohólicas.',
+        startDate: issueDate,
       },
     ]);
   };
 
   const handleRemoveItem = (id: string) => {
-    if (items.length === 1) return;
+    if (items.length === 1) {
+      alert('La prescripción médica debe contener al menos un medicamento.');
+      return;
+    }
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
@@ -115,16 +144,58 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
     );
   };
 
+  // Draft prescription for real-time validation preview
+  const draftRx: PsychiatricPrescription = {
+    id: existingPrescription?.id || 'RX-DRAFT',
+    version: existingPrescription ? existingPrescription.version + 1 : 1,
+    patientId: selectedPatient?.id || '',
+    patientName: selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '',
+    patientDocumentType: selectedPatient?.documentType || 'CC',
+    patientDocumentNumber: selectedPatient?.documentNumber || '',
+    patientBirthDate: selectedPatient?.birthDate || '',
+    issueDate,
+    expiryDate,
+    status,
+    diagnosisLinked,
+    clinicalJustification,
+    observations,
+    items,
+    psychiatristName: 'Dr. Jair Morales Restrepo',
+    psychiatristRegistration: 'ReTHUS 1032489-COL / RM 84930-BOG',
+    psychiatristSpecialty: 'Médico Especialista en Psiquiatría',
+    psychiatristInstitution: 'JAIRRESTAURA Consultorio Digital',
+    createdAt: existingPrescription?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const validationResult = validatePrescriptionConsistency(draftRx);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatient) return;
+    if (!selectedPatient) {
+      alert('Debe seleccionar un paciente válido.');
+      return;
+    }
 
     if (items.some((i) => !i.genericName.trim())) {
-      alert('Por favor complete el nombre genérico para todos los medicamentos prescritos.');
+      alert('Por favor complete el nombre genérico (DCI) para todos los medicamentos prescritos.');
       return;
     }
 
     if (existingPrescription) {
+      // If updating a previously signed prescription, we reset status to review or draft to prevent unauthorized changes
+      const wasSigned =
+        existingPrescription.status === 'Firmado' ||
+        existingPrescription.status === 'Aprobada y Firmada por Psiquiatra' ||
+        existingPrescription.status === 'Emitido' ||
+        existingPrescription.status === 'Emitida al Paciente';
+
+      const finalStatus: PrescriptionStatus = wasSigned
+        ? isPsychiatrist
+          ? 'Borrador'
+          : 'Pendiente de revisión clínica'
+        : status;
+
       updatePrescription(existingPrescription.id, {
         patientId: selectedPatient.id,
         patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
@@ -133,11 +204,22 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
         patientBirthDate: selectedPatient.birthDate,
         issueDate,
         expiryDate,
-        status,
+        status: finalStatus,
         diagnosisLinked,
         clinicalJustification,
         observations,
         items,
+        historyOfChanges: [
+          ...(existingPrescription.historyOfChanges || []),
+          {
+            timestamp: new Date().toISOString(),
+            author: `${currentProfile.name} (${currentProfile.title})`,
+            action: wasSigned
+              ? `Nueva Versión v${existingPrescription.version + 1} (Requiere refirmado)`
+              : 'Actualización de Fórmula',
+            details: `Modificación de medicamentos/posología por ${currentProfile.name}.`,
+          },
+        ],
       });
     } else {
       addPrescription({
@@ -164,19 +246,21 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden my-4 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden my-4 max-h-[94vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold">
               <Pill className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold">
-                {existingPrescription ? `Editar Fórmula ${existingPrescription.id}` : 'Nueva Prescripción Psicofarmacológica'}
+                {existingPrescription
+                  ? `Editar Fórmula Médica ${existingPrescription.id} (Versión ${existingPrescription.version})`
+                  : 'Nueva Prescripción Psicofarmacológica — Secciones A-D'}
               </h2>
               <p className="text-[11px] text-slate-400">
-                Sujeto al marco de la Resolución 1403 de 2007 y Decreto 780 de 2016
+                Regulado por Resolución 1403 de 2007 y Decreto 780 de 2016 • Ministerio de Salud y Protección Social
               </p>
             </div>
           </div>
@@ -187,108 +271,144 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 text-xs flex-1">
-          {/* Section: Paciente & Fechas */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Paciente Receptor:
-              </label>
-              <select
-                value={selectedPatientId}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
-              >
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.firstName} {p.lastName} — ({p.documentType} {p.documentNumber})
-                  </option>
-                ))}
-              </select>
+          {/* Version Notice if modifying existing */}
+          {existingPrescription && (
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-2.5 text-amber-900 dark:text-amber-200 text-xs">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Trazabilidad de Versión:</span>
+                <span>
+                  Al guardar cambios en esta fórmula, se incrementará automáticamente el número de versión (v{existingPrescription.version + 1}) conservando el historial cronológico inmutable. Si la prescripción ya había sido firmada, pasará al estado de revisión para garantizar la validez del nuevo contenido.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION A: Patient & General Information */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-1.5">
+              <h3 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-md bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center text-[10px] font-black">
+                  A
+                </span>
+                <span>Sección A — Identificación del Paciente & Diagnóstico</span>
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Paciente Receptor*:
+                </label>
+                <select
+                  value={selectedPatientId}
+                  onChange={(e) => setSelectedPatientId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
+                >
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.firstName} {p.lastName} — ({p.documentType} {p.documentNumber})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Estado del Ciclo de Vida:
+                </label>
+                <select
+                  value={status}
+                  onChange={(e: any) => setStatus(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="Borrador">Borrador</option>
+                  <option value="Pendiente de revisión clínica">Pendiente de revisión clínica</option>
+                  <option value="Observado o requiere corrección">Observado o requiere corrección</option>
+                  {isPsychiatrist && (
+                    <>
+                      <option value="Aprobado por el profesional">Aprobado por el profesional</option>
+                      <option value="Firmado">Firmado</option>
+                      <option value="Emitido">Emitido</option>
+                    </>
+                  )}
+                  <option value="Anulado">Anulado</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Fecha de Expedición*:
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Fecha de Vencimiento (30 días)*:
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Diagnóstico Clínico (CIE-10)*:
+                </label>
+                <input
+                  type="text"
+                  required
+                  list="dx-suggestions"
+                  value={diagnosisLinked}
+                  onChange={(e) => setDiagnosisLinked(e.target.value)}
+                  placeholder="Ej. F33.1 Trastorno depresivo recurrente"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
+                />
+                <datalist id="dx-suggestions">
+                  {psychiatricDxOptions.map((dx, i) => (
+                    <option key={i} value={dx} />
+                  ))}
+                </datalist>
+              </div>
             </div>
 
             <div>
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Estado del Documento:
+                Justificación Clínica del Tratamiento*:
               </label>
-              <select
-                value={status}
-                onChange={(e: any) => setStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="Borrador">Borrador</option>
-                <option value="Pendiente de Revisión Psiquiatra">Pendiente de Revisión Psiquiatra</option>
-                <option value="Observada / Devuelta">Observada / Devuelta</option>
-                {currentProfile.role === 'psiquiatra' && (
-                  <option value="Aprobada y Firmada por Psiquiatra">Aprobada y Firmada por Psiquiatra</option>
-                )}
-                <option value="Suspendida / Finalizada">Suspendida / Finalizada</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Fecha de Expedición:
-              </label>
-              <input
-                type="date"
+              <textarea
+                rows={2}
                 required
-                value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Fecha de Vencimiento (30 días máx):
-              </label>
-              <input
-                type="date"
-                required
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Diagnóstico Asociado (CIE-10):
-              </label>
-              <input
-                type="text"
-                required
-                value={diagnosisLinked}
-                onChange={(e) => setDiagnosisLinked(e.target.value)}
-                placeholder="Ej. F32.1 Episodio depresivo moderado"
+                value={clinicalJustification}
+                onChange={(e) => setClinicalJustification(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Justificación Clínica del Tratamiento:
-            </label>
-            <textarea
-              rows={2}
-              required
-              value={clinicalJustification}
-              onChange={(e) => setClinicalJustification(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-
-          {/* Section: List of Medication Items */}
+          {/* SECTION B: Prescribed Medications */}
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <Pill className="w-3.5 h-3.5 text-teal-600" />
-                  Medicamentos Prescritos
+                  <span className="w-5 h-5 rounded-md bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center text-[10px] font-black">
+                    B
+                  </span>
+                  <span>Sección B — Prescripción Médica Psicofarmacológica</span>
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Valores estrictamente validados. Prohibido el autocompletado especulativo por IA.
+                  DCI obligatorio • Control estricto de concentración, vía, frecuencia, duración y cantidad total
                 </p>
               </div>
               <button
@@ -450,7 +570,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
                   <div className="sm:col-span-2">
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Instrucciones Particulares:
+                      Indicaciones para el Paciente:
                     </label>
                     <input
                       type="text"
@@ -478,9 +598,37 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             ))}
           </div>
 
+          {/* Real-time Posological & Consistency Check Alert */}
+          {validationResult.issues.length > 0 && (
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+              <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+                <ClipboardCheck className="w-4 h-4 text-teal-600" />
+                <span>Auditoría de Consistencia en Tiempo Real:</span>
+              </div>
+              <div className="space-y-1">
+                {validationResult.issues.map((iss, i) => (
+                  <div
+                    key={i}
+                    className={`text-[11px] flex items-center gap-1.5 ${
+                      iss.type === 'error'
+                        ? 'text-red-600 dark:text-red-400'
+                        : iss.type === 'warning'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-slate-600 dark:text-slate-300'
+                    }`}
+                  >
+                    <span>{iss.type === 'error' ? '✕' : '⚠'}</span>
+                    <span>{iss.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION C & D: General Observations & Prescriber Data */}
           <div>
             <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Observaciones Generales de la Fórmula:
+              Observaciones Generales de la Prescripción:
             </label>
             <textarea
               rows={2}
@@ -490,11 +638,14 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             />
           </div>
 
-          {/* Prescribing Doctor Information Notice */}
+          {/* Section C: Prescriber info display */}
           <div className="p-3.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 flex items-center justify-between text-xs text-teal-900 dark:text-teal-200">
             <div>
-              <p className="font-bold">Médico Psiquiatra Prescriptor Asignado:</p>
+              <p className="font-bold">Sección C — Médico Psiquiatra Prescriptor Responsable:</p>
               <p className="text-[11px]">Dr. Jair Morales Restrepo • ReTHUS 1032489-COL / RM 84930-BOG</p>
+              <p className="text-[10px] text-teal-700 dark:text-teal-400 mt-0.5">
+                JAIRRESTAURA Consultorio Digital • Habilitación Decreto 780 de 2016
+              </p>
             </div>
             <ShieldCheck className="w-6 h-6 text-teal-600 shrink-0" />
           </div>
@@ -512,7 +663,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               type="submit"
               className="px-5 py-2 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white shadow-xs transition"
             >
-              {existingPrescription ? 'Guardar Cambios de Versión' : 'Crear Fórmula Médica'}
+              {existingPrescription ? 'Guardar Cambios de Versión' : 'Registrar Fórmula Médica'}
             </button>
           </div>
         </form>
