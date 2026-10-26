@@ -13,8 +13,11 @@ import {
   ChevronRight,
   Sparkles,
   Stethoscope,
+  BookOpen,
+  Brain,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+
 
 interface SidebarProps {
   isOpen: boolean;
@@ -27,9 +30,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     setActiveTab,
     patients,
     profiles,
+    pastors,
     prescriptions,
     appointments,
     currentProfile,
+    caseFormulations,
   } = useApp();
 
   // Pending prescriptions to review/sign by psychiatrist
@@ -52,6 +57,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       label: 'Ficha de Pacientes',
       icon: Users,
       badge: patients.length,
+    },
+    {
+      id: 'psychotherapy',
+      label: 'Motor Psicoterapéutico',
+      icon: Brain,
+      badge: `${caseFormulations.length} activos`,
+      highlight: true,
+      description: 'Soporte Clínico TCC / ACT / DBT',
     },
     {
       id: 'clinical',
@@ -79,6 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       highlight: true,
       description: 'Gestión Psicofarmacológica',
     },
+
     {
       id: 'reports',
       label: 'Informes Clínicos',
@@ -108,6 +122,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       label: 'Equipo Médico & Clínico',
       icon: Stethoscope,
       badge: `${profiles.length}`,
+    },
+    {
+      id: 'pastors',
+      label: 'Pastoral & Consejería',
+      icon: BookOpen,
+      badge: `${pastors.filter((p) => p.status === 'Activo').length} activos`,
     },
   ];
 

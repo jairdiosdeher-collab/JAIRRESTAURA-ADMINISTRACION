@@ -19,11 +19,15 @@ import { FinanceModule } from './components/finance/FinanceModule';
 import { DocumentsAuditModule } from './components/documents/DocumentsAuditModule';
 import { ProfessionalsModule } from './components/professionals/ProfessionalsModule';
 import { ProfessionalModal } from './components/professionals/ProfessionalModal';
+import { PastorsModule } from './components/pastors/PastorsModule';
+import { PastorModal } from './components/pastors/PastorModal';
 import { PatientModal } from './components/patients/PatientModal';
 import { AppointmentModal } from './components/agenda/AppointmentModal';
 import { SoapNoteModal } from './components/clinical/SoapNoteModal';
 import { PrescriptionModal } from './components/prescriptions/PrescriptionModal';
 import { AiClinicalAssistantModal } from './components/ai/AiClinicalAssistantModal';
+import { PsychotherapyEngineModule } from './components/psychotherapy/PsychotherapyEngineModule';
+
 
 const MainLayout: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
@@ -33,6 +37,7 @@ const MainLayout: React.FC = () => {
   const [isNewPatientOpen, setIsNewPatientOpen] = useState(false);
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [isNewProfessionalOpen, setIsNewProfessionalOpen] = useState(false);
+  const [isNewPastorOpen, setIsNewPastorOpen] = useState(false);
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
   const [soapPatientId, setSoapPatientId] = useState<string | null>(null);
   const [rxPatientId, setRxPatientId] = useState<string | null>(null);
@@ -72,7 +77,18 @@ const MainLayout: React.FC = () => {
         return <DocumentsAuditModule />;
       case 'professionals':
         return <ProfessionalsModule />;
+      case 'pastors':
+        return (
+          <PastorsModule
+            onOpenNewSoapModal={(patientId) => {
+              setSoapPatientId(patientId || null);
+            }}
+          />
+        );
+      case 'psychotherapy':
+        return <PsychotherapyEngineModule />;
       default:
+
         return (
           <Dashboard
             onOpenNewPatient={() => setIsNewPatientOpen(true)}
@@ -91,6 +107,7 @@ const MainLayout: React.FC = () => {
         onOpenNewPatient={() => setIsNewPatientOpen(true)}
         onOpenNewAppointment={() => setIsNewAppointmentOpen(true)}
         onOpenNewProfessional={() => setIsNewProfessionalOpen(true)}
+        onOpenNewPastor={() => setIsNewPastorOpen(true)}
         toggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
       />
 
@@ -107,6 +124,7 @@ const MainLayout: React.FC = () => {
       {isNewPatientOpen && <PatientModal onClose={() => setIsNewPatientOpen(false)} />}
       {isNewAppointmentOpen && <AppointmentModal onClose={() => setIsNewAppointmentOpen(false)} />}
       {isNewProfessionalOpen && <ProfessionalModal onClose={() => setIsNewProfessionalOpen(false)} />}
+      {isNewPastorOpen && <PastorModal onClose={() => setIsNewPastorOpen(false)} />}
       {isAiAssistantOpen && <AiClinicalAssistantModal onClose={() => setIsAiAssistantOpen(false)} />}
       {soapPatientId && (
         <SoapNoteModal

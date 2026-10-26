@@ -11,6 +11,11 @@ import {
   FinancialTransaction,
   AuditLogEntry,
   UserRole,
+  Pastor,
+  ClinicalCaseFormulation,
+  GuidedSessionRecord,
+  InterSessionRecord,
+  SafetyTriageRecord,
 } from '../types';
 import {
   INITIAL_PROFILES,
@@ -23,7 +28,15 @@ import {
   INITIAL_APPOINTMENTS,
   INITIAL_TRANSACTIONS,
   INITIAL_AUDIT_LOGS,
+  INITIAL_PASTORS,
 } from '../data/initialData';
+import {
+  INITIAL_CASE_FORMULATIONS,
+  INITIAL_GUIDED_SESSIONS,
+  INITIAL_INTERSESSION_RECORDS,
+  INITIAL_SAFETY_TRIAGE_RECORDS,
+} from '../data/psychotherapyProtocols';
+
 
 interface AppContextType {
   // Active Profile & Medical Team Management
@@ -93,6 +106,31 @@ interface AppContextType {
   auditLogs: AuditLogEntry[];
   logAction: (action: AuditLogEntry['action'], module: AuditLogEntry['module'], details: string, patientCodeOrId?: string) => void;
 
+  // Pastors & Pastoral Counseling
+  pastors: Pastor[];
+  addPastor: (pastor: Omit<Pastor, 'id' | 'createdAt' | 'updatedAt'>) => { success: boolean; error?: string; pastor?: Pastor };
+  updatePastor: (id: string, updates: Partial<Pastor>) => { success: boolean; error?: string };
+  togglePastorStatus: (id: string) => { success: boolean; error?: string };
+  getPastorById: (id: string) => Pastor | undefined;
+
+  // Motor Psicoterapéutico Avanzado
+  caseFormulations: ClinicalCaseFormulation[];
+  addCaseFormulation: (formulation: Omit<ClinicalCaseFormulation, 'id' | 'createdAt' | 'updatedAt'>) => ClinicalCaseFormulation;
+  updateCaseFormulation: (id: string, updates: Partial<ClinicalCaseFormulation>) => void;
+  getPatientFormulations: (patientId: string) => ClinicalCaseFormulation[];
+
+  guidedSessions: GuidedSessionRecord[];
+  addGuidedSession: (session: Omit<GuidedSessionRecord, 'id' | 'createdAt'>) => GuidedSessionRecord;
+  getPatientSessions: (patientId: string) => GuidedSessionRecord[];
+
+  interSessionLogs: InterSessionRecord[];
+  addInterSessionRecord: (record: Omit<InterSessionRecord, 'id' | 'createdAt'>) => InterSessionRecord;
+  getPatientInterSessionLogs: (patientId: string) => InterSessionRecord[];
+
+  safetyTriages: SafetyTriageRecord[];
+  addSafetyTriage: (triage: Omit<SafetyTriageRecord, 'id' | 'createdAt'>) => SafetyTriageRecord;
+  getPatientSafetyTriages: (patientId: string) => SafetyTriageRecord[];
+
   // System Management / Backup
   exportDataBackup: () => void;
   restoreDataBackup: (jsonData: string) => boolean;
@@ -113,8 +151,14 @@ const STORAGE_KEYS = {
   APPOINTMENTS: 'jr_appointments_v1',
   TRANSACTIONS: 'jr_transactions_v1',
   AUDIT_LOGS: 'jr_audit_logs_v1',
+  PASTORS: 'jr_pastors_v1',
   DARK_MODE: 'jr_dark_mode_v1',
+  CASE_FORMULATIONS: 'jr_case_formulations_v1',
+  GUIDED_SESSIONS: 'jr_guided_sessions_v1',
+  INTERSESSION_LOGS: 'jr_intersession_logs_v1',
+  SAFETY_TRIAGES: 'jr_safety_triages_v1',
 };
+
 
 function loadStorage<T>(key: string, fallback: T): T {
   try {
@@ -155,6 +199,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [appointments, setAppointments] = useState<Appointment[]>(() => loadStorage(STORAGE_KEYS.APPOINTMENTS, INITIAL_APPOINTMENTS));
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(() => loadStorage(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS));
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => loadStorage(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS));
+  const [pastors, setPastors] = useState<Pastor[]>(() => loadStorage<Pastor[]>(STORAGE_KEYS.PASTORS, INITIAL_PASTORS));
+  const [caseFormulations, setCaseFormulations] = useState<ClinicalCaseFormulation[]>(() =>
+    loadStorage(STORAGE_KEYS.CASE_FORMULATIONS, INITIAL_CASE_FORMULATIONS)
+  );
+  const [guidedSessions, setGuidedSessions] = useState<GuidedSessionRecord[]>(() =>
+    loadStorage(STORAGE_KEYS.GUIDED_SESSIONS, INITIAL_GUIDED_SESSIONS)
+  );
+  const [interSessionLogs, setInterSessionLogs] = useState<InterSessionRecord[]>(() =>
+    loadStorage(STORAGE_KEYS.INTERSESSION_LOGS, INITIAL_INTERSESSION_RECORDS)
+  );
+  const [safetyTriages, setSafetyTriages] = useState<SafetyTriageRecord[]>(() =>
+    loadStorage(STORAGE_KEYS.SAFETY_TRIAGES, INITIAL_SAFETY_TRIAGE_RECORDS)
+  );
 
   // Sync to local storage
   useEffect(() => {
@@ -164,6 +221,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(patients));
   }, [patients]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PASTORS, JSON.stringify(pastors));
+  }, [pastors]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.CASE_FORMULATIONS, JSON.stringify(caseFormulations));
+  }, [caseFormulations]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.GUIDED_SESSIONS, JSON.stringify(guidedSessions));
+  }, [guidedSessions]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.INTERSESSION_LOGS, JSON.stringify(interSessionLogs));
+  }, [interSessionLogs]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SAFETY_TRIAGES, JSON.stringify(safetyTriages));
+  }, [safetyTriages]);
+
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SOAP_NOTES, JSON.stringify(soapNotes));
@@ -470,6 +548,136 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAction('CAMBIO_ESTADO', 'PACIENTES', `Paciente archivado administrativamente`, id);
   };
 
+  // Pastors & Pastoral Counseling Management CRUD
+  const addPastor = (
+    pastorData: Omit<Pastor, 'id' | 'createdAt' | 'updatedAt'>
+  ): { success: boolean; error?: string; pastor?: Pastor } => {
+    if (!pastorData.fullName || pastorData.fullName.trim().length < 3) {
+      return { success: false, error: 'El nombre completo del pastor/ministro es obligatorio (mínimo 3 caracteres).' };
+    }
+    if (!pastorData.documentNumber || pastorData.documentNumber.trim().length < 4) {
+      return { success: false, error: 'El número de documento de identificación es obligatorio.' };
+    }
+    if (!pastorData.churchName || pastorData.churchName.trim().length < 3) {
+      return { success: false, error: 'La iglesia, congregación o comunidad pastoral es obligatoria.' };
+    }
+    if (!pastorData.ministerialRole || pastorData.ministerialRole.trim().length < 2) {
+      return { success: false, error: 'El cargo o función ministerial es obligatorio.' };
+    }
+    if (!pastorData.phone || pastorData.phone.trim().length < 7) {
+      return { success: false, error: 'El teléfono o celular de contacto es obligatorio.' };
+    }
+    if (!pastorData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pastorData.email.trim())) {
+      return { success: false, error: 'Ingrese una dirección de correo electrónico válida.' };
+    }
+
+    const cleanDoc = pastorData.documentNumber.trim().toLowerCase();
+    const duplicateDoc = pastors.find(
+      (p) => p.documentNumber.trim().toLowerCase() === cleanDoc
+    );
+    if (duplicateDoc) {
+      return {
+        success: false,
+        error: `Ya existe un pastor registrado con el documento ${pastorData.documentType} ${pastorData.documentNumber}: ${duplicateDoc.fullName} (${duplicateDoc.churchName}).`,
+      };
+    }
+
+    const cleanEmail = pastorData.email.trim().toLowerCase();
+    const duplicateEmail = pastors.find(
+      (p) => p.email.trim().toLowerCase() === cleanEmail
+    );
+    if (duplicateEmail) {
+      return {
+        success: false,
+        error: `El correo "${pastorData.email}" ya está registrado para otro pastor (${duplicateEmail.fullName}).`,
+      };
+    }
+
+    const nextNum = pastors.length + 1;
+    let newId = `PAS-2026-${String(nextNum).padStart(3, '0')}`;
+    let counter = nextNum;
+    while (pastors.some((p) => p.id === newId)) {
+      counter++;
+      newId = `PAS-2026-${String(counter).padStart(3, '0')}`;
+    }
+
+    const now = new Date().toISOString();
+    const newPastor: Pastor = {
+      ...pastorData,
+      id: newId,
+      status: pastorData.status || 'Activo',
+      pastoralFocus: pastorData.pastoralFocus || [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setPastors((prev) => [newPastor, ...prev]);
+    logAction(
+      'CREACIÓN',
+      'PASTORAL',
+      `Registro de nuevo pastor: ${newPastor.fullName} (${newPastor.churchName} - ${newPastor.ministerialRole})`,
+      newId
+    );
+    return { success: true, pastor: newPastor };
+  };
+
+  const updatePastor = (id: string, updates: Partial<Pastor>): { success: boolean; error?: string } => {
+    const existing = pastors.find((p) => p.id === id);
+    if (!existing) return { success: false, error: 'Pastor no encontrado en el directorio.' };
+
+    if (updates.documentNumber) {
+      const cleanDoc = updates.documentNumber.trim().toLowerCase();
+      const duplicate = pastors.find(
+        (p) => p.id !== id && p.documentNumber.trim().toLowerCase() === cleanDoc
+      );
+      if (duplicate) {
+        return {
+          success: false,
+          error: `Ya existe otro pastor con el documento ${updates.documentNumber}: ${duplicate.fullName} (${duplicate.churchName}).`,
+        };
+      }
+    }
+
+    if (updates.email) {
+      const cleanEmail = updates.email.trim().toLowerCase();
+      const duplicate = pastors.find(
+        (p) => p.id !== id && p.email.trim().toLowerCase() === cleanEmail
+      );
+      if (duplicate) {
+        return {
+          success: false,
+          error: `El correo "${updates.email}" ya pertenece a otro pastor (${duplicate.fullName}).`,
+        };
+      }
+    }
+
+    setPastors((prev) =>
+      prev.map((p) => {
+        if (p.id === id) {
+          const updated = { ...p, ...updates, updatedAt: new Date().toISOString() };
+          logAction('MODIFICACIÓN', 'PASTORAL', `Actualización de ficha pastoral: ${updated.fullName} (${updated.churchName})`, id);
+          return updated;
+        }
+        return p;
+      })
+    );
+    return { success: true };
+  };
+
+  const togglePastorStatus = (id: string): { success: boolean; error?: string } => {
+    const target = pastors.find((p) => p.id === id);
+    if (!target) return { success: false, error: 'Pastor no encontrado.' };
+
+    const newStatus: 'Activo' | 'Inactivo' = target.status === 'Activo' ? 'Inactivo' : 'Activo';
+    setPastors((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: newStatus, updatedAt: new Date().toISOString() } : p))
+    );
+    logAction('CAMBIO_ESTADO', 'PASTORAL', `Estado del pastor ${target.fullName} cambiado a: ${newStatus}`, id);
+    return { success: true };
+  };
+
+  const getPastorById = (id: string) => pastors.find((p) => p.id === id);
+
   // SOAP Notes
   const addSoapNote = (noteData: Omit<SoapNote, 'id' | 'createdAt' | 'hashIntegrity'>): SoapNote => {
     const randomHex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -712,6 +920,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAction('MODIFICACIÓN', 'FINANZAS', `Movimiento contable ${id} modificado`);
   };
 
+  // Motor Psicoterapéutico Avanzado Methods
+  const addCaseFormulation = (
+    data: Omit<ClinicalCaseFormulation, 'id' | 'createdAt' | 'updatedAt'>
+  ): ClinicalCaseFormulation => {
+    const newFormulation: ClinicalCaseFormulation = {
+      ...data,
+      id: `FORM-2026-${String(caseFormulations.length + 1).padStart(3, '0')}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setCaseFormulations((prev) => [newFormulation, ...prev]);
+    logAction('CREACIÓN', 'PSICOTERAPIA', `Formulación clínica (${data.modalityPrimary.toUpperCase()}) registrada para ${data.patientName}`, data.patientId);
+    return newFormulation;
+  };
+
+  const updateCaseFormulation = (id: string, updates: Partial<ClinicalCaseFormulation>) => {
+    setCaseFormulations((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, ...updates, updatedAt: new Date().toISOString() } : f))
+    );
+    const target = caseFormulations.find((f) => f.id === id);
+    logAction('MODIFICACIÓN', 'PSICOTERAPIA', `Formulación clínica ${id} actualizada`, target?.patientId);
+  };
+
+  const getPatientFormulations = (patientId: string) =>
+    caseFormulations.filter((f) => f.patientId === patientId);
+
+  const addGuidedSession = (
+    data: Omit<GuidedSessionRecord, 'id' | 'createdAt'>
+  ): GuidedSessionRecord => {
+    const newSession: GuidedSessionRecord = {
+      ...data,
+      id: `SES-2026-${String(guidedSessions.length + 1).padStart(3, '0')}`,
+      createdAt: new Date().toISOString(),
+    };
+    setGuidedSessions((prev) => [newSession, ...prev]);
+    logAction('CREACIÓN', 'PSICOTERAPIA', `Sesión clínica guiada #${data.sessionNumber} registrada (${data.modality.toUpperCase()}) para ${data.patientName}`, data.patientId);
+    return newSession;
+  };
+
+  const getPatientSessions = (patientId: string) =>
+    guidedSessions.filter((s) => s.patientId === patientId);
+
+  const addInterSessionRecord = (
+    data: Omit<InterSessionRecord, 'id' | 'createdAt'>
+  ): InterSessionRecord => {
+    const newRecord: InterSessionRecord = {
+      ...data,
+      id: `LOG-2026-${String(interSessionLogs.length + 1).padStart(3, '0')}`,
+      createdAt: new Date().toISOString(),
+    };
+    setInterSessionLogs((prev) => [newRecord, ...prev]);
+    logAction('CREACIÓN', 'PSICOTERAPIA', `Registro inter-sesión registrado para ${data.patientName}: Estado de ánimo ${data.moodScore}/10`, data.patientId);
+    return newRecord;
+  };
+
+  const getPatientInterSessionLogs = (patientId: string) =>
+    interSessionLogs.filter((l) => l.patientId === patientId);
+
+  const addSafetyTriage = (
+    data: Omit<SafetyTriageRecord, 'id' | 'createdAt'>
+  ): SafetyTriageRecord => {
+    const newTriage: SafetyTriageRecord = {
+      ...data,
+      id: `TRI-2026-${String(safetyTriages.length + 1).padStart(3, '0')}`,
+      createdAt: new Date().toISOString(),
+    };
+    setSafetyTriages((prev) => [newTriage, ...prev]);
+    logAction(
+      data.riskLevel === 'Rojo' || data.riskLevel === 'Naranja' ? 'CAMBIO_ESTADO' : 'CREACIÓN',
+      'PSICOTERAPIA',
+      `Triaje de seguridad clínico para ${data.patientName}: Nivel ${data.riskLevel.toUpperCase()}`,
+      data.patientId
+    );
+    return newTriage;
+  };
+
+  const getPatientSafetyTriages = (patientId: string) =>
+    safetyTriages.filter((t) => t.patientId === patientId);
+
   // Backup & Restore
   const exportDataBackup = () => {
     const backup = {
@@ -730,6 +1017,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         appointments,
         transactions,
         auditLogs,
+        pastors,
+        caseFormulations,
+        guidedSessions,
+        interSessionLogs,
+        safetyTriages,
       },
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -759,6 +1051,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setReports(parsed.data.reports || []);
       setAppointments(parsed.data.appointments || []);
       setTransactions(parsed.data.transactions || []);
+      if (parsed.data.pastors && Array.isArray(parsed.data.pastors)) {
+        setPastors(parsed.data.pastors);
+      }
+      if (parsed.data.caseFormulations && Array.isArray(parsed.data.caseFormulations)) {
+        setCaseFormulations(parsed.data.caseFormulations);
+      }
+      if (parsed.data.guidedSessions && Array.isArray(parsed.data.guidedSessions)) {
+        setGuidedSessions(parsed.data.guidedSessions);
+      }
+      if (parsed.data.interSessionLogs && Array.isArray(parsed.data.interSessionLogs)) {
+        setInterSessionLogs(parsed.data.interSessionLogs);
+      }
+      if (parsed.data.safetyTriages && Array.isArray(parsed.data.safetyTriages)) {
+        setSafetyTriages(parsed.data.safetyTriages);
+      }
       if (parsed.data.auditLogs) {
         setAuditLogs(parsed.data.auditLogs);
       }
@@ -781,6 +1088,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAppointments(INITIAL_APPOINTMENTS);
     setTransactions(INITIAL_TRANSACTIONS);
     setAuditLogs(INITIAL_AUDIT_LOGS);
+    setPastors(INITIAL_PASTORS);
+    setCaseFormulations(INITIAL_CASE_FORMULATIONS);
+    setGuidedSessions(INITIAL_GUIDED_SESSIONS);
+    setInterSessionLogs(INITIAL_INTERSESSION_RECORDS);
+    setSafetyTriages(INITIAL_SAFETY_TRIAGE_RECORDS);
     logAction('COPIA_SEGURIDAD', 'SEGURIDAD', 'Reinicio de datos del consultorio a configuración inicial clínica.');
   };
 
@@ -832,6 +1144,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTransaction,
         auditLogs,
         logAction,
+        pastors,
+        addPastor,
+        updatePastor,
+        togglePastorStatus,
+        getPastorById,
+        caseFormulations,
+        addCaseFormulation,
+        updateCaseFormulation,
+        getPatientFormulations,
+        guidedSessions,
+        addGuidedSession,
+        getPatientSessions,
+        interSessionLogs,
+        addInterSessionRecord,
+        getPatientInterSessionLogs,
+        safetyTriages,
+        addSafetyTriage,
+        getPatientSafetyTriages,
         exportDataBackup,
         restoreDataBackup,
         resetToInitialData,
@@ -840,6 +1170,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       {children}
     </AppContext.Provider>
   );
+
 };
 
 export const useApp = () => {

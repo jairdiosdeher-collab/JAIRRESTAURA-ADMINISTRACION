@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Plus,
   Video,
+  Brain,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatCOP, formatDate } from '../../utils/formatters';
@@ -37,10 +38,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     treatmentPlans,
     transactions,
     soapNotes,
+    caseFormulations,
     setActiveTab,
     setSelectedPatientId,
     currentProfile,
   } = useApp();
+
 
   const [dateRangeFilter, setDateRangeFilter] = useState<'mes_actual' | 'anual' | 'todo'>('mes_actual');
 
@@ -107,6 +110,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="flex flex-wrap items-center gap-2.5">
             <button
+              onClick={() => setActiveTab('psychotherapy')}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm flex items-center gap-1.5"
+            >
+              <Brain className="w-3.5 h-3.5" />
+              Motor Psicoterapéutico ({caseFormulations.length})
+            </button>
+            <button
               onClick={onOpenNewAppointment}
               className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white transition shadow-sm flex items-center gap-1.5"
             >
@@ -122,6 +132,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
           </div>
         </div>
+
 
         {/* Security & Sync Status Bar */}
         <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between text-xs text-slate-300 gap-3">

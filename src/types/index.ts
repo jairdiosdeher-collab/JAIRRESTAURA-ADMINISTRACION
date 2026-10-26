@@ -331,8 +331,32 @@ export interface AuditLogEntry {
   userName: string;
   userRole: UserRole;
   action: 'CREACIÓN' | 'CONSULTA' | 'MODIFICACIÓN' | 'FIRMA_DIGITAL' | 'EXPORTACIÓN_PDF' | 'CAMBIO_ESTADO' | 'COPIA_SEGURIDAD';
-  module: 'PACIENTES' | 'HISTORIA_CLINICA' | 'DIAGNOSTICOS' | 'TRATAMIENTOS' | 'PRESCRIPCIONES' | 'INFORMES' | 'AGENDA' | 'FINANZAS' | 'SEGURIDAD';
+  module: 'PACIENTES' | 'HISTORIA_CLINICA' | 'DIAGNOSTICOS' | 'TRATAMIENTOS' | 'PRESCRIPCIONES' | 'INFORMES' | 'AGENDA' | 'FINANZAS' | 'SEGURIDAD' | 'PASTORAL' | 'PSICOTERAPIA';
   details: string;
   patientCodeOrId?: string;
   ipAddress?: string;
 }
+
+export interface Pastor {
+  id: string; // e.g. PAS-2026-001
+  fullName: string;
+  documentType: DocumentType;
+  documentNumber: string;
+  churchName: string; // Iglesia o congregación
+  ministerialRole: string; // e.g. Pastor Principal, Pastor Asociado, Consejero Pastoral, Capellán, etc.
+  denomination?: string;
+  phone: string;
+  email: string;
+  city: string;
+  department?: string;
+  address?: string;
+  pastoralFocus: string[]; // e.g. ['Duelo y Pérdida', 'Familia y Matrimonio', 'Acompañamiento Espiritual']
+  status: 'Activo' | 'Inactivo';
+  linkedUserId?: string; // Vinculación opcional con perfil de orientador para login
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export * from './psychotherapy';
+

@@ -12,8 +12,12 @@ import {
   Stethoscope,
   BookOpen,
   Lock,
+  Download,
+  Check,
+  Brain,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+
 import { UserProfile } from '../../types';
 
 interface NavbarProps {
@@ -21,6 +25,7 @@ interface NavbarProps {
   onOpenNewPatient: () => void;
   onOpenNewAppointment: () => void;
   onOpenNewProfessional?: () => void;
+  onOpenNewPastor?: () => void;
   toggleMobileMenu: () => void;
 }
 
@@ -29,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewPatient,
   onOpenNewAppointment,
   onOpenNewProfessional,
+  onOpenNewPastor,
   toggleMobileMenu,
 }) => {
   const {
@@ -42,6 +48,33 @@ export const Navbar: React.FC<NavbarProps> = ({
   } = useApp();
 
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+
+  const handleDownloadStandaloneHtml = async () => {
+    setIsDownloading(true);
+    try {
+      // Fetch the pre-bundled singlefile index.html from static serve
+      const res = await fetch('/index.standalone.html');
+      if (!res.ok) throw new Error('No se pudo cargar el archivo.');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setDownloadNotice('¡Descarga iniciada! El archivo index.html contiene la aplicación completa para GitHub Pages o Vercel.');
+      setTimeout(() => setDownloadNotice(null), 6000);
+    } catch (e) {
+      console.error('Error al descargar:', e);
+      window.location.href = '/index.standalone.html';
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -132,6 +165,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Agendar Cita</span>
           </button>
 
+          {/* Quick Action: Motor Psicoterapéutico */}
+          <button
+            onClick={() => setActiveTab('psychotherapy')}
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-xs"
+            title="Acceso al Motor Psicoterapéutico Avanzado (TCC, ACT, DBT)"
+          >
+            <Brain className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Psicoterapia</span>
+          </button>
+
           {/* AI Clinical Assistant Button */}
           <button
             onClick={onOpenAiAssistant}
@@ -142,6 +185,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden sm:inline">Asistente IA Clínico</span>
             <span className="sm:hidden">IA</span>
           </button>
+
 
           {/* Selector de Modo Claro / Oscuro */}
           <button
@@ -161,6 +205,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="hidden sm:inline">Claro</span>
               </>
             )}
+          </button>
+
+          {/* Botón Descargar index.html (App Completa para GitHub / Vercel) */}
+          <button
+            onClick={handleDownloadStandaloneHtml}
+            disabled={isDownloading}
+            className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs cursor-pointer"
+            title="Descargar la aplicación completa en un único archivo index.html para GitHub Pages, Vercel o uso local offline"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>{isDownloading ? 'Descargando...' : 'Descargar index.html'}</span>
           </button>
 
           {/* Backup Button */}
@@ -273,13 +328,53 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setProfileDropdownOpen(false);
-                      setActiveTab('professionals');
+                      if (onOpenNewPastor) onOpenNewPastor();
                     }}
-                    className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 transition border border-slate-200 dark:border-slate-600"
+                    className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white flex items-center justify-center gap-1.5 transition shadow-2xs"
                   >
-                    <Stethoscope className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                    <span>Ver Directorio de Profesionales</span>
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>+ Registrar Nuevo Pastor / Ministro</span>
                   </button>
+
+                  <div className="grid grid-cols-2 gap-1 pt-0.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProfileDropdownOpen(false);
+                        setActiveTab('professionals');
+                      }}
+                      className="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 transition border border-slate-200 dark:border-slate-600"
+                    >
+                      <Stethoscope className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                      <span>Equipo Médico</span>
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProfileDropdownOpen(false);
+                        setActiveTab('pastors');
+                      }}
+                      className="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 transition border border-slate-200 dark:border-slate-600"
+                    >
+                      <BookOpen className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                      <span>Pastoral</span>
+                    </button>
+                  </div>
+
+                  <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProfileDropdownOpen(false);
+                        handleDownloadStandaloneHtml();
+                      }}
+                      className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition shadow-2xs"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Descargar index.html (App Completa)</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
@@ -291,6 +386,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Download Completion Banner */}
+      {downloadNotice && (
+        <div className="bg-emerald-600 text-white px-4 py-2 text-xs font-medium flex items-center justify-between animate-in slide-in-from-top-2 duration-150 shadow-md">
+          <div className="flex items-center gap-2 max-w-4xl mx-auto">
+            <Check className="w-4 h-4 text-emerald-200 shrink-0" />
+            <span>{downloadNotice}</span>
+          </div>
+          <button
+            onClick={() => setDownloadNotice(null)}
+            className="text-emerald-200 hover:text-white text-xs px-2 py-0.5 rounded"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </header>
   );
 };
