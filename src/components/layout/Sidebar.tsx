@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   ChevronRight,
   Sparkles,
+  Stethoscope,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     activeTab,
     setActiveTab,
     patients,
+    profiles,
     prescriptions,
     appointments,
     currentProfile,
@@ -100,6 +102,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       label: 'Auditoría & Ley 1581',
       icon: ShieldAlert,
       badge: 'Seguridad',
+    },
+    {
+      id: 'professionals',
+      label: 'Equipo Médico & Clínico',
+      icon: Stethoscope,
+      badge: `${profiles.length}`,
     },
   ];
 

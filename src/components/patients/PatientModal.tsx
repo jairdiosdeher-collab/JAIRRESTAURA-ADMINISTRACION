@@ -82,39 +82,42 @@ export const PatientModal: React.FC<PatientModalProps> = ({
     existingPatient?.generalNotes || ''
   );
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const calculatedAge = calculateAge(birthDate);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     const responsible = profiles.find((p) => p.id === responsibleId) || profiles[0];
 
     const patientPayload = {
-      firstName,
-      lastName,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       documentType,
-      documentNumber,
+      documentNumber: documentNumber.trim(),
       birthDate,
       gender,
-      phone,
-      whatsapp,
-      email,
-      city,
-      department,
-      address,
-      occupation,
+      phone: phone.trim(),
+      whatsapp: whatsapp?.trim(),
+      email: email.trim(),
+      city: city.trim(),
+      department: department.trim(),
+      address: address?.trim(),
+      occupation: occupation?.trim(),
       civilStatus,
       emergencyContact: {
-        name: emergencyName,
-        relationship: emergencyRel,
-        phone: emergencyPhone,
+        name: emergencyName.trim(),
+        relationship: emergencyRel.trim(),
+        phone: emergencyPhone.trim(),
       },
       legalGuardian: isMinor
         ? {
-            name: guardianName,
+            name: guardianName.trim(),
             documentType: 'CC' as DocumentType,
-            documentNumber: guardianDoc,
+            documentNumber: guardianDoc.trim(),
             relationship: 'Padre / Madre / Tutor',
-            phone: emergencyPhone,
+            phone: emergencyPhone.trim(),
           }
         : undefined,
       admissionDate: existingPatient?.admissionDate || '2026-10-25',
@@ -136,9 +139,17 @@ export const PatientModal: React.FC<PatientModalProps> = ({
     };
 
     if (existingPatient) {
-      updatePatient(existingPatient.id, patientPayload);
+      const res = updatePatient(existingPatient.id, patientPayload);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Error al actualizar paciente.');
+        return;
+      }
     } else {
-      addPatient(patientPayload);
+      const res = addPatient(patientPayload);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Error al registrar paciente.');
+        return;
+      }
     }
 
     onClose();
@@ -165,6 +176,15 @@ export const PatientModal: React.FC<PatientModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+          {errorMessage && (
+            <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block text-xs">Error de Validación:</span>
+                <span className="text-[11px] leading-relaxed">{errorMessage}</span>
+              </div>
+            </div>
+          )}
           {/* Identificación personal */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>

@@ -17,6 +17,8 @@ import { ClinicalReportsModule } from './components/reports/ClinicalReportsModul
 import { AgendaModule } from './components/agenda/AgendaModule';
 import { FinanceModule } from './components/finance/FinanceModule';
 import { DocumentsAuditModule } from './components/documents/DocumentsAuditModule';
+import { ProfessionalsModule } from './components/professionals/ProfessionalsModule';
+import { ProfessionalModal } from './components/professionals/ProfessionalModal';
 import { PatientModal } from './components/patients/PatientModal';
 import { AppointmentModal } from './components/agenda/AppointmentModal';
 import { SoapNoteModal } from './components/clinical/SoapNoteModal';
@@ -30,6 +32,7 @@ const MainLayout: React.FC = () => {
   // Global modals
   const [isNewPatientOpen, setIsNewPatientOpen] = useState(false);
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
+  const [isNewProfessionalOpen, setIsNewProfessionalOpen] = useState(false);
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
   const [soapPatientId, setSoapPatientId] = useState<string | null>(null);
   const [rxPatientId, setRxPatientId] = useState<string | null>(null);
@@ -67,6 +70,8 @@ const MainLayout: React.FC = () => {
         return <FinanceModule />;
       case 'documents':
         return <DocumentsAuditModule />;
+      case 'professionals':
+        return <ProfessionalsModule />;
       default:
         return (
           <Dashboard
@@ -85,6 +90,7 @@ const MainLayout: React.FC = () => {
         onOpenAiAssistant={() => setIsAiAssistantOpen(true)}
         onOpenNewPatient={() => setIsNewPatientOpen(true)}
         onOpenNewAppointment={() => setIsNewAppointmentOpen(true)}
+        onOpenNewProfessional={() => setIsNewProfessionalOpen(true)}
         toggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
       />
 
@@ -100,6 +106,7 @@ const MainLayout: React.FC = () => {
       {/* Global Modals */}
       {isNewPatientOpen && <PatientModal onClose={() => setIsNewPatientOpen(false)} />}
       {isNewAppointmentOpen && <AppointmentModal onClose={() => setIsNewAppointmentOpen(false)} />}
+      {isNewProfessionalOpen && <ProfessionalModal onClose={() => setIsNewProfessionalOpen(false)} />}
       {isAiAssistantOpen && <AiClinicalAssistantModal onClose={() => setIsAiAssistantOpen(false)} />}
       {soapPatientId && (
         <SoapNoteModal

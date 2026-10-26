@@ -175,9 +175,9 @@ export const PrescriptionModule: React.FC = () => {
   };
 
   const handleDirectApprove = (rx: PsychiatricPrescription) => {
-    if (!isPsychiatrist) {
+    if (!isPsychiatrist || !currentProfile.canSignPrescriptions) {
       setPermissionDeniedMessage(
-        `Operación Denegada: Su sesión actual corresponde a "${currentProfile.title}". Conforme a la legislación colombiana (Ley 1098 de 2006, Ley 1164 de 2007 y Decreto 780 de 2016), solo el Médico Especialista en Psiquiatría (Dr. Jair Morales Restrepo) está facultado para aprobar tratamientos psicofarmacológicos.`
+        `Operación Denegada: Su sesión actual corresponde a "${currentProfile.title}" (${currentProfile.name}). Conforme a la legislación colombiana (Ley 1164 de 2007 y Decreto 780 de 2016), solo los Médicos Especialistas en Psiquiatría acreditados en ReTHUS están legalmente facultados para aprobar tratamientos psicofarmacológicos.`
       );
       return;
     }
@@ -197,9 +197,9 @@ export const PrescriptionModule: React.FC = () => {
   };
 
   const handleInitiateSign = (rx: PsychiatricPrescription) => {
-    if (!isPsychiatrist) {
+    if (!isPsychiatrist || !currentProfile.canSignPrescriptions) {
       setPermissionDeniedMessage(
-        `Operación Denegada: Su sesión actual corresponde a "${currentProfile.title}". Conforme a la legislación colombiana (Ley 1098 de 2006, Ley 1164 de 2007 y Decreto 780 de 2016), solo el Médico Especialista en Psiquiatría (Dr. Jair Morales Restrepo) está legalmente autorizado para aprobar y firmar prescripciones psicofarmacológicas. Puede cambiar al perfil del Dr. Jair en el selector superior para firmar esta fórmula.`
+        `Operación Denegada: Su sesión actual corresponde a "${currentProfile.title}" (${currentProfile.name}). Conforme a la legislación colombiana (Ley 1164 de 2007, Resolución 1403 de 2007 y Decreto 780 de 2016), el registro de un médico o profesional por sí solo no otorga facultades para prescribir psicofármacos: solo el Médico Especialista en Psiquiatría acreditado en ReTHUS está autorizado para firmar prescripciones psicotrópicas.`
       );
       return;
     }

@@ -26,10 +26,13 @@ import {
 } from '../data/initialData';
 
 interface AppContextType {
-  // Active Profile & Role
+  // Active Profile & Medical Team Management
   profiles: UserProfile[];
   currentProfile: UserProfile;
   setCurrentProfile: (profile: UserProfile) => void;
+  addProfile: (profile: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>) => { success: boolean; error?: string; profile?: UserProfile };
+  updateProfile: (id: string, updates: Partial<UserProfile>) => { success: boolean; error?: string };
+  toggleProfileStatus: (id: string) => { success: boolean; error?: string };
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 
@@ -41,8 +44,8 @@ interface AppContextType {
 
   // Patients
   patients: Patient[];
-  addPatient: (patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>) => Patient;
-  updatePatient: (id: string, updates: Partial<Patient>) => void;
+  addPatient: (patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>) => { success: boolean; error?: string; patient?: Patient };
+  updatePatient: (id: string, updates: Partial<Patient>) => { success: boolean; error?: string };
   archivePatient: (id: string) => void;
 
   // Clinical Records / SOAP Notes
@@ -124,10 +127,19 @@ function loadStorage<T>(key: string, fallback: T): T {
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [profiles] = useState<UserProfile[]>(() => loadStorage(STORAGE_KEYS.PROFILES, INITIAL_PROFILES));
+  const [profiles, setProfiles] = useState<UserProfile[]>(() => {
+    const loaded = loadStorage<UserProfile[]>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+    return loaded.map((p) => ({
+      ...p,
+      status: p.status || 'Activo',
+      canSignPrescriptions: p.canSignPrescriptions ?? (p.role === 'psiquiatra'),
+    }));
+  });
+
   const [currentProfile, setCurrentProfileState] = useState<UserProfile>(() => {
     const savedId = loadStorage(STORAGE_KEYS.CURRENT_USER_ID, INITIAL_PROFILES[0].id);
-    return INITIAL_PROFILES.find((p) => p.id === savedId) || INITIAL_PROFILES[0];
+    const loadedProfiles = loadStorage<UserProfile[]>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+    return loadedProfiles.find((p) => p.id === savedId) || INITIAL_PROFILES.find((p) => p.id === savedId) || INITIAL_PROFILES[0];
   });
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => loadStorage(STORAGE_KEYS.DARK_MODE, false));
@@ -145,6 +157,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => loadStorage(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS));
 
   // Sync to local storage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(profiles));
+  }, [profiles]);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(patients));
   }, [patients]);
@@ -198,6 +214,164 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAction('CONSULTA', 'SEGURIDAD', `Cambio de sesión activa a: ${profile.name} (${profile.title})`);
   };
 
+  // Medical Team Management (Profiles) CRUD
+  const addProfile = (
+    profileData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>
+  ): { success: boolean; error?: string; profile?: UserProfile } => {
+    if (!profileData.name || profileData.name.trim().length < 3) {
+      return { success: false, error: 'El nombre completo del profesional es obligatorio (mínimo 3 caracteres).' };
+    }
+    if (!profileData.registrationNumber || profileData.registrationNumber.trim().length < 4) {
+      return { success: false, error: 'El número de registro médico, tarjeta profesional o ReTHUS es obligatorio.' };
+    }
+
+    // Check duplicate ReTHUS / registrationNumber
+    const duplicateReg = profiles.find(
+      (p) => p.registrationNumber.trim().toLowerCase() === profileData.registrationNumber.trim().toLowerCase()
+    );
+    if (duplicateReg) {
+      return {
+        success: false,
+        error: `Ya existe un profesional registrado con el registro / ReTHUS "${profileData.registrationNumber}" (${duplicateReg.name}). Evite duplicidades de habilitación profesional.`,
+      };
+    }
+
+    // Check email
+    if (!profileData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email.trim())) {
+      return { success: false, error: 'El correo electrónico institucional no tiene un formato válido.' };
+    }
+    const duplicateEmail = profiles.find(
+      (p) => p.email.trim().toLowerCase() === profileData.email.trim().toLowerCase()
+    );
+    if (duplicateEmail) {
+      return {
+        success: false,
+        error: `El correo electrónico "${profileData.email}" ya se encuentra registrado para el profesional ${duplicateEmail.name}.`,
+      };
+    }
+
+    // Unique ID generation
+    const maxNum = profiles.reduce((max, p) => {
+      const match = p.id.match(/usr-[a-z]+-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    const prefix =
+      profileData.role === 'psiquiatra'
+        ? 'psiq'
+        : profileData.role === 'psicologo'
+        ? 'psic'
+        : profileData.role === 'orientador'
+        ? 'past'
+        : 'admin';
+    const newId = `usr-${prefix}-${String(maxNum + 1).padStart(2, '0')}`;
+
+    // Clinical signing permission enforcement: Only psychiatrists with verified ReTHUS can sign prescriptions!
+    const canSignPrescriptions = profileData.role === 'psiquiatra';
+
+    const now = new Date().toISOString();
+    const newProfile: UserProfile = {
+      ...profileData,
+      id: newId,
+      canSignPrescriptions,
+      status: profileData.status || 'Activo',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setProfiles((prev) => [...prev, newProfile]);
+    logAction(
+      'CREACIÓN',
+      'SEGURIDAD',
+      `Registro de nuevo profesional clínico: ${newProfile.name} (${newProfile.title} - ${newProfile.registrationNumber}). Rol: ${newProfile.role}`
+    );
+    return { success: true, profile: newProfile };
+  };
+
+  const updateProfile = (id: string, updates: Partial<UserProfile>): { success: boolean; error?: string } => {
+    const existing = profiles.find((p) => p.id === id);
+    if (!existing) {
+      return { success: false, error: 'Profesional no encontrado en el sistema.' };
+    }
+
+    if (updates.registrationNumber) {
+      const duplicateReg = profiles.find(
+        (p) => p.id !== id && p.registrationNumber.trim().toLowerCase() === updates.registrationNumber!.trim().toLowerCase()
+      );
+      if (duplicateReg) {
+        return {
+          success: false,
+          error: `El número de registro / ReTHUS ya pertenece a otro profesional registrado (${duplicateReg.name}).`,
+        };
+      }
+    }
+
+    if (updates.email) {
+      const duplicateEmail = profiles.find(
+        (p) => p.id !== id && p.email.trim().toLowerCase() === updates.email!.trim().toLowerCase()
+      );
+      if (duplicateEmail) {
+        return {
+          success: false,
+          error: `El correo electrónico ya pertenece a otro profesional registrado (${duplicateEmail.name}).`,
+        };
+      }
+    }
+
+    const newRole = updates.role || existing.role;
+    const canSignPrescriptions = newRole === 'psiquiatra';
+
+    setProfiles((prev) =>
+      prev.map((p) => {
+        if (p.id === id) {
+          const updated: UserProfile = {
+            ...p,
+            ...updates,
+            canSignPrescriptions,
+            updatedAt: new Date().toISOString(),
+          };
+          if (currentProfile.id === id) {
+            setCurrentProfileState(updated);
+          }
+          return updated;
+        }
+        return p;
+      })
+    );
+
+    logAction(
+      'MODIFICACIÓN',
+      'SEGURIDAD',
+      `Actualización de credenciales y datos del profesional: ${existing.name} (ID: ${id})`
+    );
+    return { success: true };
+  };
+
+  const toggleProfileStatus = (id: string): { success: boolean; error?: string } => {
+    if (currentProfile.id === id) {
+      return {
+        success: false,
+        error: 'No es posible inactivar al profesional que tiene la sesión activa actualmente. Cambie de usuario primero.',
+      };
+    }
+    const target = profiles.find((p) => p.id === id);
+    if (!target) return { success: false, error: 'Profesional no encontrado.' };
+
+    const newStatus: 'Activo' | 'Inactivo' = target.status === 'Activo' ? 'Inactivo' : 'Activo';
+    setProfiles((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: newStatus, updatedAt: new Date().toISOString() } : p))
+    );
+    logAction(
+      'CAMBIO_ESTADO',
+      'SEGURIDAD',
+      `Estado del profesional ${target.name} cambiado a: ${newStatus}`
+    );
+    return { success: true };
+  };
+
   const logAction = (
     action: AuditLogEntry['action'],
     module: AuditLogEntry['module'],
@@ -219,9 +393,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs((prev) => [newEntry, ...prev.slice(0, 199)]);
   };
 
-  // Patients CRUD
-  const addPatient = (patientData: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>): Patient => {
-    const newId = `PAC-2026-${String(patients.length + 1).padStart(3, '0')}`;
+  // Patients CRUD with duplicate document detection
+  const addPatient = (
+    patientData: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>
+  ): { success: boolean; error?: string; patient?: Patient } => {
+    const cleanDoc = patientData.documentNumber.trim().toLowerCase();
+    const existingPatient = patients.find(
+      (p) => p.documentType === patientData.documentType && p.documentNumber.trim().toLowerCase() === cleanDoc
+    );
+    if (existingPatient) {
+      return {
+        success: false,
+        error: `Ya existe un paciente registrado con ${patientData.documentType} ${patientData.documentNumber}: ${existingPatient.firstName} ${existingPatient.lastName} (Código: ${existingPatient.id}). No se permiten historias clínicas duplicadas (Ley 1090/2006 y Res. 1995/1999).`,
+      };
+    }
+
+    const maxNum = patients.reduce((max, p) => {
+      const match = p.id.match(/PAC-\d+-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    const newId = `PAC-2026-${String(maxNum + 1).padStart(3, '0')}`;
+
     const newPatient: Patient = {
       ...patientData,
       id: newId,
@@ -229,11 +425,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: new Date().toISOString(),
     };
     setPatients((prev) => [newPatient, ...prev]);
-    logAction('CREACIÓN', 'PACIENTES', `Ingreso de nuevo paciente: ${newPatient.firstName} ${newPatient.lastName} (${newPatient.documentType} ${newPatient.documentNumber})`, newId);
-    return newPatient;
+    logAction(
+      'CREACIÓN',
+      'PACIENTES',
+      `Ingreso de nuevo paciente: ${newPatient.firstName} ${newPatient.lastName} (${newPatient.documentType} ${newPatient.documentNumber})`,
+      newId
+    );
+    return { success: true, patient: newPatient };
   };
 
-  const updatePatient = (id: string, updates: Partial<Patient>) => {
+  const updatePatient = (id: string, updates: Partial<Patient>): { success: boolean; error?: string } => {
+    const existing = patients.find((p) => p.id === id);
+    if (!existing) return { success: false, error: 'Paciente no encontrado.' };
+
+    if (updates.documentNumber || updates.documentType) {
+      const docType = updates.documentType || existing.documentType;
+      const docNum = (updates.documentNumber || existing.documentNumber).trim().toLowerCase();
+      const duplicate = patients.find(
+        (p) => p.id !== id && p.documentType === docType && p.documentNumber.trim().toLowerCase() === docNum
+      );
+      if (duplicate) {
+        return {
+          success: false,
+          error: `Ya existe otro paciente registrado con ${docType} ${updates.documentNumber}: ${duplicate.firstName} ${duplicate.lastName} (${duplicate.id}).`,
+        };
+      }
+    }
+
     setPatients((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -244,6 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return p;
       })
     );
+    return { success: true };
   };
 
   const archivePatient = (id: string) => {
@@ -501,6 +720,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       exportedAt: new Date().toISOString(),
       exportedBy: currentProfile.name,
       data: {
+        profiles,
         patients,
         soapNotes,
         diagnostics,
@@ -528,6 +748,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!parsed.data || !parsed.data.patients) {
         throw new Error('Formato de copia de seguridad no válido');
       }
+      if (parsed.data.profiles && Array.isArray(parsed.data.profiles)) {
+        setProfiles(parsed.data.profiles);
+      }
       setPatients(parsed.data.patients || []);
       setSoapNotes(parsed.data.soapNotes || []);
       setDiagnostics(parsed.data.diagnostics || []);
@@ -548,6 +771,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetToInitialData = () => {
+    setProfiles(INITIAL_PROFILES);
     setPatients(INITIAL_PATIENTS);
     setSoapNotes(INITIAL_SOAP_NOTES);
     setDiagnostics(INITIAL_DIAGNOSTICS);
@@ -566,6 +790,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         profiles,
         currentProfile,
         setCurrentProfile,
+        addProfile,
+        updateProfile,
+        toggleProfileStatus,
         isDarkMode,
         toggleDarkMode,
         activeTab,

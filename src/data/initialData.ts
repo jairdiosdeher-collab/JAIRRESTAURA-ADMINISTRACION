@@ -20,6 +20,10 @@ export const INITIAL_PROFILES: UserProfile[] = [
     registrationNumber: 'ReTHUS 1032489-COL / RM 84930-BOG',
     specialty: 'Psiquiatría de Enlace y Salud Mental del Adulto',
     email: 'jair.morales@jairrestaura.com',
+    phone: '+57 310 892 4110',
+    status: 'Activo',
+    canSignPrescriptions: true,
+    admissionDate: '2024-01-15',
   },
   {
     id: 'usr-psic-02',
@@ -29,6 +33,10 @@ export const INITIAL_PROFILES: UserProfile[] = [
     registrationNumber: 'TP 189422 Colegio Colombiano de Psicólogos (COLPSIC)',
     specialty: 'Terapia Cognitivo-Conductual y Trauma',
     email: 'valentina.gomez@jairrestaura.com',
+    phone: '+57 312 455 8820',
+    status: 'Activo',
+    canSignPrescriptions: false,
+    admissionDate: '2024-03-01',
   },
   {
     id: 'usr-past-03',
@@ -38,6 +46,10 @@ export const INITIAL_PROFILES: UserProfile[] = [
     registrationNumber: 'Cert. Teología & Consejería Pastoral CCP-401',
     specialty: 'Cuidado Pastoral, Familia y Duelo',
     email: 'carlos.mendez@jairrestaura.com',
+    phone: '+57 315 780 1290',
+    status: 'Activo',
+    canSignPrescriptions: false,
+    admissionDate: '2024-05-10',
   },
   {
     id: 'usr-admin-04',
@@ -47,6 +59,10 @@ export const INITIAL_PROFILES: UserProfile[] = [
     registrationNumber: 'Contaduría Pública TP 229104-T',
     specialty: 'Administración en Salud y Facturación Electrónica DIAN',
     email: 'administracion@jairrestaura.com',
+    phone: '+57 320 634 5099',
+    status: 'Activo',
+    canSignPrescriptions: false,
+    admissionDate: '2024-02-01',
   },
 ];
 

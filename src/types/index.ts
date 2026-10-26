@@ -8,7 +8,13 @@ export interface UserProfile {
   registrationNumber: string; // Registro Médico / Tarjeta Profesional / ReTHUS
   specialty: string;
   email: string;
+  phone?: string;
+  status: 'Activo' | 'Inactivo';
+  canSignPrescriptions?: boolean; // Solo activo para Médicos Especialistas en Psiquiatría habilitados
+  admissionDate?: string;
   avatarUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type DocumentType = 'CC' | 'TI' | 'CE' | 'Pasaporte' | 'RC' | 'PEP';

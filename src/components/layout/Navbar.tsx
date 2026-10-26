@@ -20,6 +20,7 @@ interface NavbarProps {
   onOpenAiAssistant: () => void;
   onOpenNewPatient: () => void;
   onOpenNewAppointment: () => void;
+  onOpenNewProfessional?: () => void;
   toggleMobileMenu: () => void;
 }
 
@@ -27,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAiAssistant,
   onOpenNewPatient,
   onOpenNewAppointment,
+  onOpenNewProfessional,
   toggleMobileMenu,
 }) => {
   const {
@@ -36,6 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     isDarkMode,
     toggleDarkMode,
     exportDataBackup,
+    setActiveTab,
   } = useApp();
 
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -140,14 +143,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="sm:hidden">IA</span>
           </button>
 
-          {/* Dark / Light Mode */}
+          {/* Selector de Modo Claro / Oscuro */}
           <button
             onClick={toggleDarkMode}
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
-            aria-label="Cambiar tema"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition text-xs font-semibold shadow-2xs"
+            title={isDarkMode ? 'Modo Oscuro activo (Clic para cambiar a Claro)' : 'Modo Claro activo (Clic para cambiar a Oscuro)'}
+            aria-label={isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
           >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            {isDarkMode ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="hidden sm:inline">Oscuro</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                <span className="hidden sm:inline">Claro</span>
+              </>
+            )}
           </button>
 
           {/* Backup Button */}
@@ -242,7 +255,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                   })}
                 </div>
 
-                <div className="px-3 py-2 mt-1 border-t border-slate-100 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                {/* Actions: Register New Doctor / View Directory */}
+                <div className="p-2 border-t border-slate-100 dark:border-slate-700 space-y-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProfileDropdownOpen(false);
+                      if (onOpenNewProfessional) onOpenNewProfessional();
+                    }}
+                    className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white flex items-center justify-center gap-1.5 transition shadow-2xs"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>+ Registrar Nuevo Médico / Especialista</span>
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProfileDropdownOpen(false);
+                      setActiveTab('professionals');
+                    }}
+                    className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 transition border border-slate-200 dark:border-slate-600"
+                  >
+                    <Stethoscope className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    <span>Ver Directorio de Profesionales</span>
+                  </button>
+                </div>
+
+                <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
                   <span>Marco Legal: Ley 1581 / Dec 780</span>
                   <span className="text-emerald-600 dark:text-emerald-400 font-medium">ReTHUS Verificado</span>
                 </div>

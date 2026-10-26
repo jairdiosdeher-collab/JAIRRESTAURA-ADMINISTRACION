@@ -33,11 +33,35 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 }) => {
   const {
     patients,
+    profiles,
     diagnostics,
     currentProfile,
     addPrescription,
     updatePrescription,
   } = useApp();
+
+  const activePsychiatrists = profiles.filter(
+    (p) => p.role === 'psiquiatra' && (p.status || 'Activo') === 'Activo'
+  );
+
+  const initialPsychiatristId = (() => {
+    if (existingPrescription?.psychiatristRegistration) {
+      const found = activePsychiatrists.find(
+        (p) => p.registrationNumber === existingPrescription.psychiatristRegistration
+      );
+      if (found) return found.id;
+    }
+    if (currentProfile.role === 'psiquiatra') {
+      return currentProfile.id;
+    }
+    return activePsychiatrists[0]?.id || profiles[0]?.id || '';
+  })();
+
+  const [selectedPsychiatristId, setSelectedPsychiatristId] = useState<string>(initialPsychiatristId);
+  const selectedPsychiatrist =
+    profiles.find((p) => p.id === selectedPsychiatristId) ||
+    activePsychiatrists[0] ||
+    profiles[0];
 
   const [selectedPatientId, setSelectedPatientId] = useState<string>(
     existingPrescription?.patientId || defaultPatientId || (patients[0]?.id || '')
@@ -160,9 +184,9 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
     clinicalJustification,
     observations,
     items,
-    psychiatristName: 'Dr. Jair Morales Restrepo',
-    psychiatristRegistration: 'ReTHUS 1032489-COL / RM 84930-BOG',
-    psychiatristSpecialty: 'Médico Especialista en Psiquiatría',
+    psychiatristName: selectedPsychiatrist.name,
+    psychiatristRegistration: selectedPsychiatrist.registrationNumber,
+    psychiatristSpecialty: selectedPsychiatrist.title || selectedPsychiatrist.specialty,
     psychiatristInstitution: 'JAIRRESTAURA Consultorio Digital',
     createdAt: existingPrescription?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -209,6 +233,9 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
         clinicalJustification,
         observations,
         items,
+        psychiatristName: selectedPsychiatrist.name,
+        psychiatristRegistration: selectedPsychiatrist.registrationNumber,
+        psychiatristSpecialty: selectedPsychiatrist.title || selectedPsychiatrist.specialty,
         historyOfChanges: [
           ...(existingPrescription.historyOfChanges || []),
           {
@@ -235,9 +262,9 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
         clinicalJustification,
         observations,
         items,
-        psychiatristName: 'Dr. Jair Morales Restrepo',
-        psychiatristRegistration: 'ReTHUS 1032489-COL / RM 84930-BOG',
-        psychiatristSpecialty: 'Médico Especialista en Psiquiatría',
+        psychiatristName: selectedPsychiatrist.name,
+        psychiatristRegistration: selectedPsychiatrist.registrationNumber,
+        psychiatristSpecialty: selectedPsychiatrist.title || selectedPsychiatrist.specialty,
         psychiatristInstitution: 'JAIRRESTAURA Consultorio Digital',
       });
     }
@@ -639,15 +666,44 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
           </div>
 
           {/* Section C: Prescriber info display */}
-          <div className="p-3.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 flex items-center justify-between text-xs text-teal-900 dark:text-teal-200">
-            <div>
-              <p className="font-bold">Sección C — Médico Psiquiatra Prescriptor Responsable:</p>
-              <p className="text-[11px]">Dr. Jair Morales Restrepo • ReTHUS 1032489-COL / RM 84930-BOG</p>
-              <p className="text-[10px] text-teal-700 dark:text-teal-400 mt-0.5">
-                JAIRRESTAURA Consultorio Digital • Habilitación Decreto 780 de 2016
-              </p>
+          <div className="p-3.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 space-y-2 text-xs text-teal-900 dark:text-teal-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold">Sección C — Médico Psiquiatra Prescriptor Responsable:</p>
+                <p className="text-[10px] text-teal-700 dark:text-teal-400">
+                  Habilitación según Decreto 780 de 2016 y Resolución 1403 de 2007
+                </p>
+              </div>
+              <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0" />
             </div>
-            <ShieldCheck className="w-6 h-6 text-teal-600 shrink-0" />
+
+            {activePsychiatrists.length > 1 ? (
+              <div>
+                <label className="block text-[11px] font-semibold text-teal-950 dark:text-teal-200 mb-1">
+                  Seleccionar Médico Psiquiatra Acreditado:
+                </label>
+                <select
+                  value={selectedPsychiatristId}
+                  onChange={(e) => setSelectedPsychiatristId(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold"
+                >
+                  {activePsychiatrists.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — {p.registrationNumber} ({p.specialty})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="p-2 rounded-lg bg-white/70 dark:bg-slate-800/70 border border-teal-200 dark:border-teal-800/60">
+                <p className="font-semibold text-slate-900 dark:text-white">
+                  {selectedPsychiatrist.name}
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                  {selectedPsychiatrist.registrationNumber} • {selectedPsychiatrist.specialty}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Footer Controls */}
