@@ -3,6 +3,7 @@ import { UserPlus, X, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Patient, DocumentType, PatientStatus } from '../../types';
 import { calculateAge } from '../../utils/formatters';
+import { ContextualHelpButton } from '../help/ContextualHelpButton';
 
 interface PatientModalProps {
   onClose: () => void;
@@ -170,9 +171,16 @@ export const PatientModal: React.FC<PatientModalProps> = ({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <ContextualHelpButton
+              sectionId="sec-05-registro-pacientes"
+              label="¿Cómo registrar?"
+              variant="badge"
+            />
+            <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Cerrar modal">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">

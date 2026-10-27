@@ -15,6 +15,7 @@ import {
   Stethoscope,
   BookOpen,
   Brain,
+  HelpCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -128,6 +129,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       label: 'Pastoral & Consejería',
       icon: BookOpen,
       badge: `${pastors.filter((p) => p.status === 'Activo').length} activos`,
+    },
+    {
+      id: 'help',
+      label: 'Centro de Ayuda',
+      icon: HelpCircle,
+      badge: '27 temas',
+      highlight: true,
+      description: 'Manual de Usuario & PDF',
     },
   ];
 

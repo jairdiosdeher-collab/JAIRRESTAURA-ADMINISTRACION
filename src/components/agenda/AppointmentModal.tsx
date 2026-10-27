@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, X, Video, MapPin } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AttentionModality, AppointmentStatus } from '../../types';
+import { ContextualHelpButton } from '../help/ContextualHelpButton';
 
 interface AppointmentModalProps {
   onClose: () => void;
@@ -73,9 +74,16 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <ContextualHelpButton
+              sectionId="sec-07-agenda-citas"
+              label="¿Cómo agendar?"
+              variant="badge"
+            />
+            <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Cerrar modal">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">

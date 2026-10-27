@@ -19,6 +19,7 @@ import {
   PrescriptionStatus,
 } from '../../types';
 import { validatePrescriptionConsistency } from '../../utils/consistencyValidator';
+import { ContextualHelpButton } from '../help/ContextualHelpButton';
 
 interface PrescriptionModalProps {
   onClose: () => void;
@@ -291,9 +292,16 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <ContextualHelpButton
+              sectionId="sec-17-prescripcion-psiquiatrica"
+              label="Guía de Formulación"
+              variant="badge"
+            />
+            <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Cerrar modal">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Form Body */}

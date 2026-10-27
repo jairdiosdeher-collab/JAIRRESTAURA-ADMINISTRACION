@@ -55,7 +55,20 @@ interface AppContextType {
   selectedPatientId: string | null;
   setSelectedPatientId: (id: string | null) => void;
 
+  // Centro de Ayuda & Soporte Contextual
+  helpSectionTarget: string | null;
+  setHelpSectionTarget: (target: string | null) => void;
+  previousTab: string | null;
+  navigateToHelp: (sectionId?: string) => void;
+  returnFromHelp: () => void;
+  contextualDrawerOpen: boolean;
+  setContextualDrawerOpen: (open: boolean) => void;
+  contextualHelpSectionId: string | null;
+  openContextualHelp: (sectionId: string) => void;
+  closeContextualHelp: () => void;
+
   // Patients
+
   patients: Patient[];
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>) => { success: boolean; error?: string; patient?: Patient };
   updatePatient: (id: string, updates: Partial<Patient>) => { success: boolean; error?: string };
@@ -189,6 +202,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => loadStorage(STORAGE_KEYS.DARK_MODE, false));
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+
+  // Centro de Ayuda & Soporte Contextual
+  const [helpSectionTarget, setHelpSectionTarget] = useState<string | null>(null);
+  const [previousTab, setPreviousTab] = useState<string | null>(null);
+  const [contextualDrawerOpen, setContextualDrawerOpen] = useState<boolean>(false);
+  const [contextualHelpSectionId, setContextualHelpSectionId] = useState<string | null>(null);
+
 
   const [patients, setPatients] = useState<Patient[]>(() => loadStorage(STORAGE_KEYS.PATIENTS, INITIAL_PATIENTS));
   const [soapNotes, setSoapNotes] = useState<SoapNote[]>(() => loadStorage(STORAGE_KEYS.SOAP_NOTES, INITIAL_SOAP_NOTES));
@@ -999,7 +1019,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getPatientSafetyTriages = (patientId: string) =>
     safetyTriages.filter((t) => t.patientId === patientId);
 
+  // Centro de Ayuda & Navegación Contextual
+  const navigateToHelp = (sectionId?: string) => {
+    setPreviousTab(activeTab === 'help' ? previousTab : activeTab);
+    if (sectionId) {
+      setHelpSectionTarget(sectionId);
+    }
+    setActiveTab('help');
+    logAction('CONSULTA', 'MANUAL', `Consulta del Centro de Ayuda${sectionId ? ` (Sección: ${sectionId})` : ''}`);
+  };
+
+  const returnFromHelp = () => {
+    if (previousTab && previousTab !== 'help') {
+      setActiveTab(previousTab);
+    } else {
+      setActiveTab('dashboard');
+    }
+  };
+
+  const openContextualHelp = (sectionId: string) => {
+    setContextualHelpSectionId(sectionId);
+    setContextualDrawerOpen(true);
+    logAction('CONSULTA', 'MANUAL', `Apertura de ayuda contextual para sección: ${sectionId}`);
+  };
+
+  const closeContextualHelp = () => {
+    setContextualDrawerOpen(false);
+  };
+
   // Backup & Restore
+
   const exportDataBackup = () => {
     const backup = {
       app: 'JAIRRESTAURA CONSULTORIO DIGITAL — ENTERPRISE',
@@ -1162,11 +1211,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         safetyTriages,
         addSafetyTriage,
         getPatientSafetyTriages,
+        helpSectionTarget,
+        setHelpSectionTarget,
+        previousTab,
+        navigateToHelp,
+        returnFromHelp,
+        contextualDrawerOpen,
+        setContextualDrawerOpen,
+        contextualHelpSectionId,
+        openContextualHelp,
+        closeContextualHelp,
         exportDataBackup,
         restoreDataBackup,
         resetToInitialData,
       }}
     >
+
       {children}
     </AppContext.Provider>
   );

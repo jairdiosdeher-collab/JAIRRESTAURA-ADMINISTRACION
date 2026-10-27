@@ -2,13 +2,18 @@ import jsPDF from 'jspdf';
 import { PsychiatricPrescription, ClinicalReport } from '../types';
 import { formatDate, formatDateTime } from './formatters';
 
+const createPdfDoc = (options: any): any => {
+  const ctor = (jsPDF as any).jsPDF || (jsPDF as any).default || jsPDF;
+  return new ctor(options);
+};
+
 /**
  * MOTOR DE FÓRMULAS MÉDICAS — JAIRRESTAURA CONSULTORIO DIGITAL
  * Generates an official, publication-grade vector A4 PDF complying with Colombian
  * clinical standards (Decreto 780 de 2016, Resolución 1403 de 2007, Ley 1581 de 2012).
  */
 export const downloadPrescriptionPDF = (prescription: PsychiatricPrescription): void => {
-  const doc = new jsPDF({
+  const doc = createPdfDoc({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
@@ -471,7 +476,7 @@ export const downloadClinicalReportPDF = (
   report: ClinicalReport,
   linkedPrescription?: PsychiatricPrescription
 ): void => {
-  const doc = new jsPDF({
+  const doc = createPdfDoc({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build && npm run build:singlefile",
-    "build:singlefile": "vite build --config vite.singlefile.config.ts && mkdir -p public .aistudio/artifacts/brain/b74ce92d-c507-469d-8a63-eef6781ee8e0 && cp dist_singlefile/index.html public/index.standalone.html && cp dist_singlefile/index.html public/index.html && cp dist_singlefile/index.html .aistudio/artifacts/brain/b74ce92d-c507-469d-8a63-eef6781ee8e0/index.html",
+    "build:singlefile": "vite build --config vite.singlefile.config.ts && mkdir -p public /.aistudio/artifacts/brain/b74ce92d-c507-469d-8a63-eef6781ee8e0 && cp dist_singlefile/index.html public/index.standalone.html && cp dist_singlefile/index.html public/index.html && cp dist_singlefile/index.html /.aistudio/artifacts/brain/b74ce92d-c507-469d-8a63-eef6781ee8e0/index.html",
     "preview": "vite preview",
     "clean": "rm -rf dist dist_singlefile server.js",
     "lint": "tsc --noEmit"

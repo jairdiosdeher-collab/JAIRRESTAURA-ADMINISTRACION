@@ -331,7 +331,7 @@ export interface AuditLogEntry {
   userName: string;
   userRole: UserRole;
   action: 'CREACIÓN' | 'CONSULTA' | 'MODIFICACIÓN' | 'FIRMA_DIGITAL' | 'EXPORTACIÓN_PDF' | 'CAMBIO_ESTADO' | 'COPIA_SEGURIDAD';
-  module: 'PACIENTES' | 'HISTORIA_CLINICA' | 'DIAGNOSTICOS' | 'TRATAMIENTOS' | 'PRESCRIPCIONES' | 'INFORMES' | 'AGENDA' | 'FINANZAS' | 'SEGURIDAD' | 'PASTORAL' | 'PSICOTERAPIA';
+  module: 'PACIENTES' | 'HISTORIA_CLINICA' | 'DIAGNOSTICOS' | 'TRATAMIENTOS' | 'PRESCRIPCIONES' | 'INFORMES' | 'AGENDA' | 'FINANZAS' | 'SEGURIDAD' | 'PASTORAL' | 'PSICOTERAPIA' | 'MANUAL';
   details: string;
   patientCodeOrId?: string;
   ipAddress?: string;
@@ -358,5 +358,24 @@ export interface Pastor {
   updatedAt: string;
 }
 
+export interface UserManualSection {
+  id: string;
+  number: number;
+  title: string;
+  category: 'Introducción' | 'Gestión Clínica' | 'Psicoterapia & Psiquiatría' | 'Administración & Soporte' | 'Seguridad & Auditoría';
+  summary: string;
+  whatItDoes: string;
+  howToAccess: string;
+  steps: { stepNumber: number; instruction: string; detail?: string }[];
+  requiredData: string[];
+  successVerification: string;
+  troubleshooting: string;
+  securityAndPrivacyPrecautions: string;
+  keywords: string[];
+  relatedModuleId?: string;
+  faqs?: { question: string; answer: string }[];
+}
+
 export * from './psychotherapy';
+
 

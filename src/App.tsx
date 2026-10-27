@@ -27,6 +27,8 @@ import { SoapNoteModal } from './components/clinical/SoapNoteModal';
 import { PrescriptionModal } from './components/prescriptions/PrescriptionModal';
 import { AiClinicalAssistantModal } from './components/ai/AiClinicalAssistantModal';
 import { PsychotherapyEngineModule } from './components/psychotherapy/PsychotherapyEngineModule';
+import { HelpCenterModule } from './components/help/HelpCenterModule';
+import { ContextualHelpDrawer } from './components/help/ContextualHelpDrawer';
 
 
 const MainLayout: React.FC = () => {
@@ -87,6 +89,8 @@ const MainLayout: React.FC = () => {
         );
       case 'psychotherapy':
         return <PsychotherapyEngineModule />;
+      case 'help':
+        return <HelpCenterModule />;
       default:
 
         return (
@@ -138,6 +142,9 @@ const MainLayout: React.FC = () => {
           onClose={() => setRxPatientId(null)}
         />
       )}
+
+      {/* Global Contextual Help Slide-Over Drawer */}
+      <ContextualHelpDrawer />
     </div>
   );
 };

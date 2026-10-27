@@ -15,6 +15,7 @@ import {
   Download,
   Check,
   Brain,
+  HelpCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -205,6 +206,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="hidden sm:inline">Claro</span>
               </>
             )}
+          </button>
+
+          {/* Botón Centro de Ayuda & Manual */}
+          <button
+            onClick={() => setActiveTab('help')}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/90 dark:bg-teal-950/70 text-teal-800 dark:text-teal-200 hover:bg-teal-100 dark:hover:bg-teal-900/60 transition text-xs font-semibold shadow-2xs cursor-pointer"
+            title="Centro de Ayuda y Manual del Usuario (27 Guías Paso a Paso & Descarga PDF)"
+            aria-label="Abrir Centro de Ayuda"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+            <span className="hidden sm:inline">Manual</span>
           </button>
 
           {/* Botón Descargar index.html (App Completa para GitHub / Vercel) */}

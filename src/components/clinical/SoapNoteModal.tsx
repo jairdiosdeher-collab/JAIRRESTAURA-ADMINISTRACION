@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NoteType } from '../../types';
+import { ContextualHelpButton } from '../help/ContextualHelpButton';
 
 interface SoapNoteModalProps {
   onClose: () => void;
@@ -112,9 +113,16 @@ export const SoapNoteModal: React.FC<SoapNoteModalProps> = ({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <ContextualHelpButton
+              sectionId="sec-14-historia-clinica-soap"
+              label="Guía SOAP"
+              variant="badge"
+            />
+            <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Cerrar modal">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">

@@ -100,7 +100,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-xs text-slate-400">Bogotá D.C., Colombia</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold mt-1 text-white tracking-tight">
-              Bienvenido, {currentProfile.name}
+              Bienvenido, Jair Hernández Rodríguez
             </h1>
             <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
               Sistema integral de orientación psicológica, psiquiatría y acompañamiento pastoral.
